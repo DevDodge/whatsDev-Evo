@@ -10,4 +10,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: true,
+    allowedHosts: [
+      'dk.whatsdeveloper.com',
+      'localhost',
+      '178.63.34.211',
+    ],
+  },
 })

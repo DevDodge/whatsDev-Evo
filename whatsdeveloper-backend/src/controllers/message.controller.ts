@@ -32,27 +32,47 @@ export class MessageController {
    */
   async sendMessage(req: Request, res: Response) {
     try {
-      const { phone, message } = req.body;
+      // Support both 'phone' and 'to' parameters (n8n compatibility)
+      const phone = req.body.phone || req.body.to;
+      const message = req.body.message;
 
       if (!phone || !message) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: phone, message',
+          error: 'Missing required fields: phone/to, message',
         });
       }
 
-      const result = await this.evolutionService.sendText(phone, message);
-
-      return res.json({
+      // ✅ Respond immediately to n8n
+      res.json({
         success: true,
-        data: result,
+        status: 'queued',
+        message: 'Message queued for sending',
+        data: {
+          phone,
+          type: 'text',
+        },
       });
+
+      // 🚀 Send message in background (don't await)
+      this.evolutionService.sendText(phone, message).catch((error) => {
+        console.error('[sendMessage] Background send failed:', error.message);
+      });
+
     } catch (error: any) {
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to send message',
+        error: error.message || 'Failed to queue message',
       });
     }
+  }
+
+  /**
+   * Alias for sendMessage - n8n compatibility
+   * POST /api/v1/messages/send-text
+   */
+  async sendText(req: Request, res: Response) {
+    return this.sendMessage(req, res);
   }
 
   /**
@@ -84,25 +104,39 @@ export class MessageController {
    */
   async sendImage(req: Request, res: Response) {
     try {
-      const { phone, image, caption } = req.body;
+      // Support both 'phone'/'to' and 'image'/'imageUrl' (n8n compatibility)
+      const phone = req.body.phone || req.body.to;
+      const image = req.body.image || req.body.imageUrl;
+      const caption = req.body.caption;
 
       if (!phone || !image) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: phone, image',
+          error: 'Missing required fields: phone/to, image/imageUrl',
         });
       }
 
-      const result = await this.evolutionService.sendImage(phone, image, caption);
-
-      return res.json({
+      // ✅ Respond immediately to n8n
+      res.json({
         success: true,
-        data: result,
+        status: 'queued',
+        message: 'Image queued for sending',
+        data: {
+          phone,
+          type: 'image',
+          image,
+        },
       });
+
+      // 🚀 Send image in background
+      this.evolutionService.sendImage(phone, image, caption).catch((error) => {
+        console.error('[sendImage] Background send failed:', error.message);
+      });
+
     } catch (error: any) {
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to send image',
+        error: error.message || 'Failed to queue image',
       });
     }
   }
@@ -135,25 +169,39 @@ export class MessageController {
    */
   async sendVideo(req: Request, res: Response) {
     try {
-      const { phone, video, caption } = req.body;
+      // Support both 'phone'/'to' and 'video'/'videoUrl' (n8n compatibility)
+      const phone = req.body.phone || req.body.to;
+      const video = req.body.video || req.body.videoUrl;
+      const caption = req.body.caption;
 
       if (!phone || !video) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: phone, video',
+          error: 'Missing required fields: phone/to, video/videoUrl',
         });
       }
 
-      const result = await this.evolutionService.sendVideo(phone, video, caption);
-
-      return res.json({
+      // ✅ Respond immediately to n8n
+      res.json({
         success: true,
-        data: result,
+        status: 'queued',
+        message: 'Video queued for sending',
+        data: {
+          phone,
+          type: 'video',
+          video,
+        },
       });
+
+      // 🚀 Send video in background
+      this.evolutionService.sendVideo(phone, video, caption).catch((error) => {
+        console.error('[sendVideo] Background send failed:', error.message);
+      });
+
     } catch (error: any) {
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to send video',
+        error: error.message || 'Failed to queue video',
       });
     }
   }
@@ -184,25 +232,40 @@ export class MessageController {
    */
   async sendAudio(req: Request, res: Response) {
     try {
-      const { phone, audio } = req.body;
+      // Support both 'phone'/'to' and 'audio'/'audioUrl' (n8n compatibility)
+      const phone = req.body.phone || req.body.to;
+      const audio = req.body.audio || req.body.audioUrl;
+      const ptt = req.body.ptt; // PTT support for voice messages
 
       if (!phone || !audio) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: phone, audio',
+          error: 'Missing required fields: phone/to, audio/audioUrl',
         });
       }
 
-      const result = await this.evolutionService.sendAudio(phone, audio);
-
-      return res.json({
+      // ✅ Respond immediately to n8n
+      res.json({
         success: true,
-        data: result,
+        status: 'queued',
+        message: 'Audio queued for sending',
+        data: {
+          phone,
+          type: 'audio',
+          audio,
+          ptt,
+        },
       });
+
+      // 🚀 Send audio in background
+      this.evolutionService.sendAudio(phone, audio, ptt).catch((error) => {
+        console.error('[sendAudio] Background send failed:', error.message);
+      });
+
     } catch (error: any) {
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to send audio',
+        error: error.message || 'Failed to queue audio',
       });
     }
   }
@@ -235,25 +298,40 @@ export class MessageController {
    */
   async sendDocument(req: Request, res: Response) {
     try {
-      const { phone, document, fileName } = req.body;
+      // Support both 'phone'/'to' and 'document'/'documentUrl' (n8n compatibility)
+      const phone = req.body.phone || req.body.to;
+      const document = req.body.document || req.body.documentUrl;
+      const fileName = req.body.fileName || req.body.filename;
 
       if (!phone || !document) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: phone, document',
+          error: 'Missing required fields: phone/to, document/documentUrl',
         });
       }
 
-      const result = await this.evolutionService.sendDocument(phone, document, fileName);
-
-      return res.json({
+      // ✅ Respond immediately to n8n
+      res.json({
         success: true,
-        data: result,
+        status: 'queued',
+        message: 'Document queued for sending',
+        data: {
+          phone,
+          type: 'document',
+          document,
+          fileName,
+        },
       });
+
+      // 🚀 Send document in background
+      this.evolutionService.sendDocument(phone, document, fileName).catch((error) => {
+        console.error('[sendDocument] Background send failed:', error.message);
+      });
+
     } catch (error: any) {
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to send document',
+        error: error.message || 'Failed to queue document',
       });
     }
   }

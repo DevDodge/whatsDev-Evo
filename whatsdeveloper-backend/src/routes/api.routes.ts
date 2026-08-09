@@ -26,6 +26,14 @@ export function createRouter(
   router.post('/api/send-contact', (req, res) => messageController.sendContact(req, res));
   router.post('/api/send-buttons', (req, res) => messageController.sendButtons(req, res));
 
+  // n8n compatibility routes - /api/v1/messages/* endpoints
+  router.post('/api/v1/messages/send-text', (req, res) => messageController.sendText(req, res));
+  router.post('/api/v1/messages/send-message', (req, res) => messageController.sendMessage(req, res));
+  router.post('/api/v1/messages/send-image', (req, res) => messageController.sendImage(req, res));
+  router.post('/api/v1/messages/send-video', (req, res) => messageController.sendVideo(req, res));
+  router.post('/api/v1/messages/send-audio', (req, res) => messageController.sendAudio(req, res));
+  router.post('/api/v1/messages/send-document', (req, res) => messageController.sendDocument(req, res));
+
   // Sequence route (with auth middleware)
   router.post('/api/v1/messages/send-sequence', authMiddleware, (req, res) =>
     sequenceController.sendSequence(req, res),
@@ -33,9 +41,14 @@ export function createRouter(
 
   // Webhook routes (with auth middleware)
   router.post('/api/webhook/register', authMiddleware, (req, res) => webhookController.registerWebhook(req, res));
+  router.post('/api/webhook/register/:instanceId', authMiddleware, (req, res) => webhookController.registerWebhook(req, res));
+  router.post('/api/webhook/smart-register/:instanceId', (req, res) => webhookController.smartRegister(req, res)); // No auth - called by Evolution Manager
   router.get('/api/webhook/config', authMiddleware, (req, res) => webhookController.getWebhookConfig(req, res));
+  router.get('/api/webhook/config/:instanceId', authMiddleware, (req, res) => webhookController.getWebhookConfig(req, res));
+  router.get('/api/webhook/status', (req, res) => webhookController.getWebhookStatus(req, res)); // Public endpoint
   router.post('/api/webhook/test', authMiddleware, (req, res) => webhookController.testWebhook(req, res));
   router.post('/api/webhook/incoming', (req, res) => webhookController.handleIncoming(req, res)); // No auth - called by Evolution
+  router.post('/api/webhook/incoming/:instanceId', (req, res) => webhookController.handleIncoming(req, res)); // With instance ID
 
   // Test routes (for development)
   router.post('/api/test/ad-detection', (req, res) => testController.testAdDetection(req, res));

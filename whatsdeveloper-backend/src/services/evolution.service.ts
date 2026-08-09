@@ -75,14 +75,15 @@ export class EvolutionService {
   }
 
   /**
-   * Send audio
+   * Send audio (with PTT support)
    */
-  async sendAudio(phone: string, audioUrl: string, instanceName?: string, apiKeyOverride?: string) {
+  async sendAudio(phone: string, audioUrl: string, ptt?: boolean, instanceName?: string, apiKeyOverride?: string) {
     const instance = instanceName || this.defaultInstance;
     const client = this.getClient(apiKeyOverride);
     const response = await client.post(`/message/sendWhatsAppAudio/${instance}`, {
       number: phone,
       audio: audioUrl,
+      ptt: ptt !== undefined ? ptt : true, // Default to PTT if not specified
     });
     return response.data;
   }

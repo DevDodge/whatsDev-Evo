@@ -7,6 +7,7 @@ import path from 'path';
 
 import { EvolutionService } from './services/evolution.service';
 import { WebhookService } from './services/webhook.service';
+import { AutoConfigService } from './services/auto-config.service';
 import { MessageController } from './controllers/message.controller';
 import { InstanceController } from './controllers/instance.controller';
 import { SequenceController } from './controllers/sequence.controller';
@@ -24,6 +25,11 @@ const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:808
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '';
 const DEFAULT_INSTANCE_NAME = process.env.DEFAULT_INSTANCE_NAME || 'TEST';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+
+// Auto-configuration settings
+const AUTO_CONFIGURE_WEBHOOKS = process.env.AUTO_CONFIGURE_WEBHOOKS === 'true';
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || '';
+const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`;
 
 // Initialize Express app
 const app: Application = express();
@@ -113,15 +119,39 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log('╔═══════════════════════════════════════════════════════╗');
   console.log('║     WhatsDeveloper Backend Bridge API                ║');
   console.log('╠═══════════════════════════════════════════════════════╣');
-  console.log(`║  🚀 Server running on: http://localhost:${PORT}         ║`);
+  console.log(`║  🚀 Server running on: http://localhost:${PORT.toString().padEnd(4)} ║`);
   console.log(`║  📚 API Docs: http://localhost:${PORT}/api-docs          ║`);
   console.log(`║  🔗 Evolution API: ${EVOLUTION_API_URL.padEnd(29)} ║`);
   console.log(`║  📱 Instance: ${DEFAULT_INSTANCE_NAME.padEnd(37)} ║`);
   console.log('╚═══════════════════════════════════════════════════════╝');
+  console.log('');
+
+  // Auto-configure webhooks if enabled
+  if (AUTO_CONFIGURE_WEBHOOKS && N8N_WEBHOOK_URL) {
+    const autoConfig = new AutoConfigService({
+      evolutionApiUrl: EVOLUTION_API_URL,
+      evolutionApiKey: EVOLUTION_API_KEY,
+      instanceName: DEFAULT_INSTANCE_NAME,
+      backendPublicUrl: BACKEND_PUBLIC_URL,
+      n8nWebhookUrl: N8N_WEBHOOK_URL,
+    });
+
+    // Run auto-configuration in background
+    autoConfig.configure().catch((error) => {
+      console.error('Auto-configuration error:', error);
+    });
+  } else {
+    console.log('╔═══════════════════════════════════════════════════════╗');
+    console.log('║  ⚠️  Auto-configuration disabled                      ║');
+    console.log('╠═══════════════════════════════════════════════════════╣');
+    console.log('║  Set AUTO_CONFIGURE_WEBHOOKS=true in .env to enable  ║');
+    console.log('║  Also set N8N_WEBHOOK_URL and BACKEND_PUBLIC_URL     ║');
+    console.log('╚═══════════════════════════════════════════════════════╝');
+  }
 });
 
 // Graceful shutdown

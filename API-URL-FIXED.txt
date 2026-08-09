@@ -1,0 +1,41 @@
+═══════════════════════════════════════════════════════════════
+   ✅ Fixed API URL Configuration
+═══════════════════════════════════════════════════════════════
+
+## Problems Fixed:
+
+1. ✅ Added fallback to VITE_EVOLUTION_API_URL in api.ts
+2. ✅ Login now uses environment variable instead of window.location
+3. ✅ API requests will go to correct domain
+
+## Configuration:
+
+- Evolution API: https://dk.whatsdeveloper.com/evolution
+- Backend API: https://dk.whatsdeveloper.com/api
+- Manager UI: https://dk.whatsdeveloper.com/
+
+## Next Steps:
+
+1. Clear browser cache and localStorage
+2. Open: https://dk.whatsdeveloper.com/
+3. Login with credentials
+4. Try creating instance - should work now!
+
+═══════════════════════════════════════════════════════════════
+   🔑 Login Credentials
+═══════════════════════════════════════════════════════════════
+
+Email: octobotchatbot@gmail.com
+Password: Eng.DodgeMasr.Octobot.12
+
+═══════════════════════════════════════════════════════════════
+   📊 All Services Running
+═══════════════════════════════════════════════════════════════
+
+✅ Evolution API - Port 2345
+✅ Backend API - Port 3456
+✅ Manager UI - Port 4567
+
+All configured for HTTPS via IIS reverse proxy.
+
+═══════════════════════════════════════════════════════════════

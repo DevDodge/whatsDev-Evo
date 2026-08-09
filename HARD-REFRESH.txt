@@ -1,0 +1,41 @@
+═══════════════════════════════════════════════════════════════
+   ⚠️ IMPORTANT: Hard Refresh Required
+═══════════════════════════════════════════════════════════════
+
+The code has been updated but your browser is still using the old
+cached version.
+
+## How to Hard Refresh:
+
+### Option 1: Hard Refresh (Recommended)
+Press: **Ctrl + Shift + R** (Windows/Linux)
+Or: **Cmd + Shift + R** (Mac)
+
+### Option 2: Clear Cache
+1. Press F12 (DevTools)
+2. Right-click on Refresh button
+3. Select "Empty Cache and Hard Reload"
+
+### Option 3: Incognito/Private Window
+Open a new private window and test there.
+
+---
+
+## After Hard Refresh:
+
+1. Clear localStorage (F12 → Application → Clear)
+2. Refresh again
+3. Login
+4. Try creating instance
+5. Should work now! ✅
+
+═══════════════════════════════════════════════════════════════
+   🔑 Login Credentials
+═══════════════════════════════════════════════════════════════
+
+URL: https://dk.whatsdeveloper.com/
+
+Email: octobotchatbot@gmail.com
+Password: Eng.DodgeMasr.Octobot.12
+
+═══════════════════════════════════════════════════════════════

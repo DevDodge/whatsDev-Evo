@@ -1444,22 +1444,28 @@ export class BaileysStartupService extends ChannelStartupService {
               // Local Storage handling
               if (this.configService.get<LocalStorage>('LOCAL_STORAGE')?.ENABLED) {
                 try {
+                  console.log('[LOCAL_STORAGE] Processing media for local storage...');
                   const message: any = received;
 
                   const hasRealMedia = this.hasValidMediaContent(message);
 
                   if (!hasRealMedia) {
                     this.logger.warn('Message detected as media but contains no valid media content');
+                    console.log('[LOCAL_STORAGE] No valid media content');
                   } else {
+                    console.log('[LOCAL_STORAGE] Valid media detected, downloading...');
                     const media = await this.getBase64FromMediaMessage({ message }, true);
 
                     if (!media) {
                       this.logger.verbose('No valid media to upload (messageContextInfo only), skipping Local Storage');
+                      console.log('[LOCAL_STORAGE] No media to upload');
                       return;
                     }
 
                     const { buffer, mediaType, fileName } = media;
                     const mimetype = mimeTypes.lookup(fileName).toString();
+
+                    console.log('[LOCAL_STORAGE] Media downloaded, saving...', { fileName, mediaType, mimetype });
 
                     // Initialize local storage service
                     const localStorageService = new LocalStorageService(this.configService);
@@ -1470,6 +1476,8 @@ export class BaileysStartupService extends ChannelStartupService {
                       fileName,
                       mimetype,
                     );
+
+                    console.log('[LOCAL_STORAGE] Media saved successfully:', { savedFileName, mediaUrl });
 
                     // Save to database
                     await this.prismaRepository.media.create({
@@ -1485,13 +1493,18 @@ export class BaileysStartupService extends ChannelStartupService {
                     // Update message with mediaUrl
                     messageRaw.message.mediaUrl = mediaUrl;
 
+                    console.log('[LOCAL_STORAGE] Updated messageRaw.message.mediaUrl:', mediaUrl);
+
                     await this.prismaRepository.message.update({ where: { id: msg.id }, data: messageRaw });
 
                     this.logger.log(`Media saved to local storage: ${savedFileName}`);
                   }
                 } catch (error) {
+                  console.log('[LOCAL_STORAGE] Error:', error?.message, error?.stack);
                   this.logger.error(['Error on upload file to local storage', error?.message, error?.stack]);
                 }
+              } else {
+                console.log('[LOCAL_STORAGE] Local storage is disabled');
               }
             }
           }
@@ -1533,7 +1546,21 @@ export class BaileysStartupService extends ChannelStartupService {
           if (messageRaw.key.remoteJid?.includes('@lid') && messageRaw.key.remoteJidAlt) {
             messageRaw.key.remoteJid = messageRaw.key.remoteJidAlt;
           }
-          console.log(messageRaw);
+
+          // Add mediaUrl to root level for webhook if it exists in message
+          if (messageRaw.message?.mediaUrl) {
+            messageRaw.mediaUrl = messageRaw.message.mediaUrl;
+            console.log('[WEBHOOK] mediaUrl found in message:', messageRaw.mediaUrl);
+          } else {
+            console.log('[WEBHOOK] No mediaUrl in message, messageType:', messageRaw.messageType);
+          }
+
+          console.log('[WEBHOOK] Sending webhook with messageRaw:', JSON.stringify({
+            messageType: messageRaw.messageType,
+            hasMediaUrl: !!messageRaw.mediaUrl,
+            messageMediaUrl: messageRaw.message?.mediaUrl,
+            rootMediaUrl: messageRaw.mediaUrl,
+          }));
 
           this.sendDataWebhook(Events.MESSAGES_UPSERT, messageRaw);
 

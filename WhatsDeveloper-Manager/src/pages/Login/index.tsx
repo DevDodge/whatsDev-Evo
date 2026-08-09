@@ -10,21 +10,23 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
-import { Form, FormSelect } from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import { useTheme } from "@/components/theme-provider";
 
-import { verifyCreds } from "@/lib/queries/auth/verifyCreds";
-import { verifyGoServer } from "@/lib/queries/auth/verifyGoServer";
-import { verifyServer } from "@/lib/queries/auth/verifyServer";
-import { checkLicenseStatus, initRegister } from "@/lib/queries/license/license";
-import { DEFAULT_PROVIDER, logout, saveToken } from "@/lib/queries/token";
+import { DEFAULT_PROVIDER, saveToken } from "@/lib/queries/token";
 
 const loginSchema = z.object({
-  provider: z.enum(["api", "go"]).default(DEFAULT_PROVIDER),
-  serverUrl: z.string({ required_error: "serverUrl is required" }).url("URL inválida"),
-  apiKey: z.string({ required_error: "ApiKey is required" }).min(1, "API Key é obrigatória"),
+  email: z.string({ required_error: "Email is required" }).email("Invalid email"),
+  password: z.string({ required_error: "Password is required" }).min(1, "Password is required"),
 });
 type LoginSchema = z.infer<typeof loginSchema>;
+
+// Hardcoded credentials
+// Hardcoded credentials
+const VALID_EMAIL = "octobotchatbot@gmail.com";
+const VALID_PASSWORD = "Eng.DodgeMasr.Octobot.12";
+const API_KEY = "B6D9F1C3-4E8A-4F2B-9C5D-7A3E1B4F6C8D";
+const SERVER_URL = import.meta.env.VITE_EVOLUTION_API_URL || "https://dk.whatsdeveloper.com/evolution";
 
 function Login() {
   const { t } = useTranslation();
@@ -40,84 +42,34 @@ function Login() {
   const loginForm = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      provider: DEFAULT_PROVIDER,
-      serverUrl: window.location.protocol + "//" + window.location.host,
-      apiKey: "",
+      email: "",
+      password: "",
     },
   });
 
   const handleLogin: SubmitHandler<LoginSchema> = async (data) => {
     setSubmitting(true);
     setLoginError("");
+
     try {
-      const cleanUrl = data.serverUrl.replace(/\/+$/, "");
-
-      // 1. License gate FIRST — same flow evolution-go-manager uses.
-      // Only attempts the check on the API provider; the GO branch keeps its own flow.
-      if (data.provider === "api") {
-        try {
-          const lic = await checkLicenseStatus(cleanUrl, data.apiKey);
-          if (lic.status !== "active") {
-            const callbackUrl = `${window.location.origin}/manager/license/callback`;
-            const reg = await initRegister(callbackUrl, cleanUrl, data.apiKey);
-
-            if (!reg.register_url) {
-              const msg = reg.message || t("license.registerFailed");
-              setLoginError(msg);
-              return;
-            }
-
-            // Save credentials so the callback page knows where to call /license/activate.
-            saveToken({ url: cleanUrl, token: data.apiKey, provider: "api" });
-            window.location.href = reg.register_url;
-            return;
-          }
-        } catch (err) {
-          // If /license/* itself is unreachable, fall through to the normal login flow —
-          // older Evolution API builds without the licensing module behave this way.
-          console.warn("[license] status check skipped:", err);
-        }
-      }
-
-      if (data.provider === "go") {
-        const ok = await verifyGoServer({ url: cleanUrl, token: data.apiKey });
-        if (!ok) {
-          logout();
-          const msg = t("login.message.invalidCredentials");
-          loginForm.setError("apiKey", { type: "manual", message: msg });
-          setLoginError(msg);
-          return;
-        }
-        saveToken({ url: cleanUrl, token: data.apiKey, provider: "go" });
+      // Simple email/password validation
+      if (data.email === VALID_EMAIL && data.password === VALID_PASSWORD) {
+        // Save token with hardcoded values
+        saveToken({
+          version: "2.3.7",
+          clientName: "evolution",
+          url: SERVER_URL,
+          token: API_KEY,
+          provider: DEFAULT_PROVIDER,
+        });
         navigate("/manager/");
-        return;
-      }
-
-      const server = await verifyServer({ url: data.serverUrl });
-      if (!server || !server.version) {
-        logout();
-        const msg = t("login.message.invalidServer");
-        loginForm.setError("serverUrl", { type: "manual", message: msg });
+      } else {
+        const msg = "Invalid email or password";
+        loginForm.setError("password", { type: "manual", message: msg });
         setLoginError(msg);
-        return;
       }
-
-      const verify = await verifyCreds({ token: data.apiKey, url: data.serverUrl });
-      if (!verify) {
-        const msg = t("login.message.invalidCredentials");
-        loginForm.setError("apiKey", { type: "manual", message: msg });
-        setLoginError(msg);
-        return;
-      }
-
-      saveToken({
-        version: server.version,
-        clientName: server.clientName,
-        url: data.serverUrl,
-        token: data.apiKey,
-        provider: "api",
-      });
-      navigate("/manager/");
+    } catch (err) {
+      setLoginError("Login failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -135,71 +87,58 @@ function Login() {
 
         <div className="rounded-lg border bg-background/80 p-6 shadow-lg backdrop-blur-sm">
           <div className="mb-6 space-y-2">
-            <h2 className="text-2xl font-bold">{t("login.title")}</h2>
+            <h2 className="text-2xl font-bold">WhatsDeveloper Manager</h2>
             <p className="text-sm text-muted-foreground">
-              {t("login.subtitle", { defaultValue: "Digite suas credenciais para acessar o sistema" })}
+              Enter your credentials to access the system
             </p>
           </div>
 
           {loginError && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Erro</AlertTitle>
+              <AlertTitle>Error</AlertTitle>
               <AlertDescription>{loginError}</AlertDescription>
             </Alert>
           )}
 
           <Form {...loginForm}>
             <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-              {/* Provider selector kept in the tree but hidden — defaults to "api". */}
-              <div className="hidden" aria-hidden="true">
-                <FormSelect
-                  required
-                  name="provider"
-                  label="Provider"
-                  options={[
-                    { value: "api", label: "Evolution API" },
-                    { value: "go", label: "Evolution GO" },
-                  ]}
-                />
-              </div>
-
               <div className="space-y-2">
-                <Label htmlFor="login-serverUrl">
-                  {t("login.form.serverUrl")} <span className="text-rose-600">*</span>
+                <Label htmlFor="login-email">
+                  Email <span className="text-rose-600">*</span>
                 </Label>
                 <Input
-                  id="login-serverUrl"
-                  type="text"
-                  placeholder={window.location.origin}
+                  id="login-email"
+                  type="email"
+                  placeholder="your@email.com"
                   disabled={submitting}
-                  {...loginForm.register("serverUrl")}
+                  {...loginForm.register("email")}
                 />
-                {errors.serverUrl && <p className="text-sm text-destructive">{errors.serverUrl.message}</p>}
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="login-apiKey">
-                  {t("login.form.apiKey")} <span className="text-rose-600">*</span>
+                <Label htmlFor="login-password">
+                  Password <span className="text-rose-600">*</span>
                 </Label>
                 <Input
-                  id="login-apiKey"
+                  id="login-password"
                   type="password"
-                  placeholder="Sua chave de API"
+                  placeholder="Your password"
                   disabled={submitting}
-                  {...loginForm.register("apiKey")}
+                  {...loginForm.register("password")}
                 />
-                {errors.apiKey && <p className="text-sm text-destructive">{errors.apiKey.message}</p>}
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
 
               <Button type="submit" disabled={submitting} className="w-full">
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("login.button.connecting", { defaultValue: "Conectando..." })}
+                    Logging in...
                   </>
                 ) : (
-                  t("login.button.login")
+                  "Login"
                 )}
               </Button>
             </form>
@@ -210,7 +149,7 @@ function Login() {
           <p>
             © {new Date().getFullYear()} Evolution API ·{" "}
             <a href="https://docs.evolutionfoundation.com.br/" target="_blank" rel="noreferrer" className="underline hover:text-primary">
-              Documentação
+              Documentation
             </a>
           </p>
         </div>

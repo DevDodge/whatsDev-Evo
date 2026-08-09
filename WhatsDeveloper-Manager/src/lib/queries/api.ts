@@ -36,6 +36,12 @@ apiGlobal.interceptors.request.use(
     const apiUrl = getToken(TOKEN_ID.API_URL);
     if (apiUrl) {
       config.baseURL = apiUrl.toString();
+    } else {
+      // Fallback to environment variable if no token
+      const fallbackUrl = import.meta.env.VITE_EVOLUTION_API_URL;
+      if (fallbackUrl) {
+        config.baseURL = fallbackUrl;
+      }
     }
 
     if (!config.headers.has("apikey")) {

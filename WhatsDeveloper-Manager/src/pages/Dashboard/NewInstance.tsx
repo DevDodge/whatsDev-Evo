@@ -67,6 +67,7 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
       const instanceData: NewInstanceType = {
         instanceName: data.name,
         integration: data.integration,
+        qrcode: true,
         token: data.token === "" ? null : data.token,
         number: data.number === "" ? null : data.number,
         businessId: data.businessId === "" ? null : data.businessId,

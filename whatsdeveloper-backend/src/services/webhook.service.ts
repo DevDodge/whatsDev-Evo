@@ -137,16 +137,35 @@ export class WebhookService {
    * Transform Evolution message to WhatsDeveloper webhook payload
    */
   transformMessage(evolutionMessage: any, uuid: string): WebhookPayload {
+    console.log('[Webhook] Transforming message:', JSON.stringify(evolutionMessage, null, 2));
+
     const key = evolutionMessage.key || {};
     const message = evolutionMessage.message || {};
     const messageType = this.detectMessageType(message);
 
+    // Extract phone number from remoteJid (remove @s.whatsapp.net or @c.us)
+    const fromJid = key.remoteJid || '';
+    const fromPhone = fromJid.split('@')[0];
+
+    // Use mediaUrl from Evolution (local CDN) if available
+    // If not available, we'll construct it based on LOCAL_STORAGE pattern
+    let mediaUrl = evolutionMessage.mediaUrl || null;
+
+    // If mediaUrl is not in the payload, check if we can construct it
+    // Evolution stores media as: {BASE_URL}/media/{type}/{date}/{timestamp}-{id}.{ext}
+    // But since we don't have the exact filename, we'll use the WhatsApp URL as fallback
+    // and log a warning
+
     const payload: WebhookPayload = {
       uuid,
       event: 'message.received',
-      timestamp: evolutionMessage.messageTimestamp || Date.now(),
+      timestamp: evolutionMessage.messageTimestamp
+        ? (typeof evolutionMessage.messageTimestamp === 'number'
+            ? evolutionMessage.messageTimestamp * 1000
+            : evolutionMessage.messageTimestamp)
+        : Date.now(),
       data: {
-        from: key.remoteJid || '',
+        from: fromPhone || fromJid,
         fromName: evolutionMessage.pushName || '',
         to: key.participant || key.remoteJid || '',
         messageId: key.id || '',
@@ -165,46 +184,54 @@ export class WebhookService {
     // Extract message content based on type
     switch (messageType) {
       case 'text':
+        const textBody = message.conversation ||
+                        message.extendedTextMessage?.text ||
+                        '';
         payload.data.message = {
           type: 'text',
-          body: message.conversation || message.extendedTextMessage?.text || '',
+          body: textBody,
         };
+        console.log(`[Webhook] Text message extracted: "${textBody}"`);
         break;
 
       case 'image':
         payload.data.message = {
           type: 'image',
           caption: message.imageMessage?.caption || '',
-          url: message.imageMessage?.url || '',
+          url: mediaUrl || message.imageMessage?.url || '', // ← استخدم mediaUrl أولاً
           mimetype: message.imageMessage?.mimetype || 'image/jpeg',
         };
+        console.log(`[Webhook] Image message - URL: ${mediaUrl || 'WhatsApp CDN'}`);
         break;
 
       case 'video':
         payload.data.message = {
           type: 'video',
           caption: message.videoMessage?.caption || '',
-          url: message.videoMessage?.url || '',
+          url: mediaUrl || message.videoMessage?.url || '', // ← استخدم mediaUrl أولاً
           mimetype: message.videoMessage?.mimetype || 'video/mp4',
         };
+        console.log(`[Webhook] Video message - URL: ${mediaUrl || 'WhatsApp CDN'}`);
         break;
 
       case 'audio':
         payload.data.message = {
           type: 'audio',
-          url: message.audioMessage?.url || '',
+          url: mediaUrl || message.audioMessage?.url || '', // ← استخدم mediaUrl أولاً
           mimetype: message.audioMessage?.mimetype || 'audio/ogg',
         };
+        console.log(`[Webhook] Audio message - URL: ${mediaUrl || 'WhatsApp CDN'}`);
         break;
 
       case 'document':
         payload.data.message = {
           type: 'document',
           caption: message.documentMessage?.caption || '',
-          url: message.documentMessage?.url || '',
+          url: mediaUrl || message.documentMessage?.url || '', // ← استخدم mediaUrl أولاً
           filename: message.documentMessage?.fileName || 'document',
           mimetype: message.documentMessage?.mimetype || 'application/octet-stream',
         };
+        console.log(`[Webhook] Document message - URL: ${mediaUrl || 'WhatsApp CDN'}`);
         break;
 
       case 'location':
@@ -228,12 +255,14 @@ export class WebhookService {
         break;
 
       default:
+        console.log(`[Webhook] Unknown message type, raw message:`, message);
         payload.data.message = {
           type: 'unknown',
           body: JSON.stringify(message),
         };
     }
 
+    console.log('[Webhook] Final transformed payload:', JSON.stringify(payload, null, 2));
     return payload;
   }
 

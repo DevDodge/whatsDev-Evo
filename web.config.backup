@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <!--
+      IIS Reverse Proxy Configuration for WhatsDeveloper-Evolution
+      Domain: dk.whatsdeveloper.com
+      Server: 178.63.34.211
+    -->
+
+    <rewrite>
+      <rules>
+        <!-- Evolution API - Port 2345 -->
+        <rule name="Evolution API" stopProcessing="true">
+          <match url="^evolution/(.*)" />
+          <action type="Rewrite" url="http://localhost:2345/{R:1}" />
+          <serverVariables>
+            <set name="HTTP_X_ORIGINAL_HOST" value="{HTTP_HOST}" />
+            <set name="HTTP_X_FORWARDED_FOR" value="{REMOTE_ADDR}" />
+            <set name="HTTP_X_FORWARDED_PROTO" value="http" />
+          </serverVariables>
+        </rule>
+
+        <!-- Backend API - Port 3456 -->
+        <rule name="Backend API" stopProcessing="true">
+          <match url="^api/(.*)" />
+          <action type="Rewrite" url="http://localhost:3456/api/{R:1}" />
+          <serverVariables>
+            <set name="HTTP_X_ORIGINAL_HOST" value="{HTTP_HOST}" />
+            <set name="HTTP_X_FORWARDED_FOR" value="{REMOTE_ADDR}" />
+            <set name="HTTP_X_FORWARDED_PROTO" value="http" />
+          </serverVariables>
+        </rule>
+
+        <!-- Manager Frontend - Port 4567 -->
+        <rule name="Manager Frontend" stopProcessing="true">
+          <match url="^(.*)" />
+          <conditions>
+            <add input="{REQUEST_URI}" pattern="^/evolution/" negate="true" />
+            <add input="{REQUEST_URI}" pattern="^/api/" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="http://localhost:4567/{R:1}" />
+          <serverVariables>
+            <set name="HTTP_X_ORIGINAL_HOST" value="{HTTP_HOST}" />
+            <set name="HTTP_X_FORWARDED_FOR" value="{REMOTE_ADDR}" />
+            <set name="HTTP_X_FORWARDED_PROTO" value="http" />
+          </serverVariables>
+        </rule>
+      </rules>
+
+      <!-- Outbound Rules for WebSocket Support -->
+      <outboundRules>
+        <rule name="Add CORS Headers">
+          <match serverVariable="RESPONSE_Access_Control_Allow_Origin" pattern=".*" />
+          <action type="Rewrite" value="*" />
+        </rule>
+      </outboundRules>
+    </rewrite>
+
+    <!-- WebSocket Support -->
+    <webSocket enabled="true" />
+
+    <!-- Security Headers -->
+    <httpProtocol>
+      <customHeaders>
+        <add name="Access-Control-Allow-Origin" value="*" />
+        <add name="Access-Control-Allow-Methods" value="GET, POST, PUT, DELETE, OPTIONS" />
+        <add name="Access-Control-Allow-Headers" value="Content-Type, Authorization, X-API-Token, X-Device-UUID" />
+        <add name="Access-Control-Allow-Credentials" value="true" />
+      </customHeaders>
+    </httpProtocol>
+
+    <!-- Request Limits -->
+    <security>
+      <requestFiltering>
+        <requestLimits maxAllowedContentLength="104857600" />
+      </requestFiltering>
+    </security>
+
+    <!-- Application Initialization -->
+    <applicationInitialization>
+      <add initializationPage="/" />
+    </applicationInitialization>
+
+  </system.webServer>
+</configuration>

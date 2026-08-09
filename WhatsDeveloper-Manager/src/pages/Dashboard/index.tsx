@@ -71,6 +71,13 @@ function Dashboard() {
 
   const filteredInstances = useMemo(() => {
     let list = instances ?? [];
+
+    // Ensure list is always an array
+    if (!Array.isArray(list)) {
+      console.warn("Instances is not an array:", list);
+      return [];
+    }
+
     if (searchStatus !== "all") {
       list = list.filter((i) => i.connectionStatus === searchStatus);
     }
@@ -158,7 +165,7 @@ function Dashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredInstances.map((instance) => (
+            {Array.isArray(filteredInstances) && filteredInstances.map((instance) => (
               <InstanceCard
                 key={instance.id}
                 instance={instance}
